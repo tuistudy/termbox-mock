@@ -1,7 +1,7 @@
 # termbox-mock
 a simple way to mock the termbox for testing. 
 
-when i try to test my [termbox](https://github.com/nsf/termbox-go) based application (in [golang](http://golang.org)). i need to find some way to unit test the module. after some tries and get suggestion from[@nsf](https://github.com/nsf) i finally find a simple way to unit test my application. it's worth to share this idea to others.   
+when i try to test my [termbox](https://github.com/nsf/termbox-go) based application (in [golang](http://golang.org)). i need to find some way to unit test the module. after some tries and get suggestion from [@nsf](https://github.com/nsf) i finally find a simple way to unit test my application. it's worth to share this idea to others.   
 
 ##interface
 first, i don't want to expose the termbox API to my application. so i decided to wrap the termbox API with an interface. second, with an interface, it's easy to replace the underlying implementation. here is the interface:
