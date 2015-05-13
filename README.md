@@ -25,7 +25,7 @@ most of the API function in termbox are included, those i never used does not in
 ##implementation - the real one
 based on the fist condition, I choose to wrap the `termbox.PollEvent` function in `WaitEvent` method. otherwise, the application has to know the termbox API. such as `termbox.Event` and some constant. that's what i don't want. 
 
-The other choice is using the proxy field whose default value is `termbox.PollEvent`. the defalut value is useful for production ust. while in test case, we have the opportunity to change this field with other value. in this way, we can mock most of the cases. as you will see it later.
+The other choice is using the proxy field whose default value is `termbox.PollEvent`. the defalut value is useful for production use. while in test case, we have the opportunity to change the proxy field with other value/implementation. in this way, we can mock most of the cases. as you will see it later.
 
 ```go
 //Terminal implementation
