@@ -79,8 +79,8 @@ func (tb termboxImpl) WaitEvent() bool {
 }
 ~~~
 
-##implementation - the mock one
-here is the mock implementation, in TestTermboxImp i replace the proxy with a new one. it's a fuction type ~~~func() termbox.Event ~~~. in this test, the proxy just send the EventResize, EventInterrupt and EventKey in turn. one by one, slep 15ms for every Event. 
+##implementation - the test 
+here is the mock implementation, in TestTermboxImp i replace the proxy with a new one. it's a fuction type: func() termbox.Event. in this test, the proxy just send the EventResize, EventInterrupt and EventKey in turn. one by one, sleep 15ms for every Event. 
 
 ~~~go
 package view
