@@ -1,12 +1,12 @@
 # termbox-mock
 a simple way to mock the termbox for testing. 
 
-when i try to test my termbox based application (in golang). i need to find some way to unit test the module. after some tries and discuss with @nsf i finally find a simple way to unit test my application. it's worth to share this idea to others.   
+when i try to test my [termbox](https://github.com/nsf/termbox-go) based application (in [golang](http://golang.org)). i need to find some way to unit test the module. after some tries and get suggestion from[@nsf](https://github.com/nsf) i finally find a simple way to unit test my application. it's worth to share this idea to others.   
 
 ##interface
 first, i don't want to expose the termbox API to my application. so i decided to wrap the termbox API with an interface. second, with an interface, it's easy to replace the underlying implementation. here is the interface:
 
-~~~go
+```go
 i//Terminal is a simple wrapper for the Terminal display purpose
 type Terminal interface {
     Init()
@@ -18,16 +18,16 @@ type Terminal interface {
     SetInputMode()
     Clear()
 }
-~~~
+```
 
 most of the API function in termbox are included, those i never used does not included.
 
 ##implementation - the real one
-based on the fist opinion, I choose to wrap the termbox.PollEvent function in WaitEvent method. otherwise, the application has to know the termbox API. such as termbox.Event and some constant. that's what i don't want. 
+based on the fist condition, I choose to wrap the `termbox.PollEvent` function in `WaitEvent` method. otherwise, the application has to know the termbox API. such as `termbox.Event` and some constant. that's what i don't want. 
 
-The other choice i made is replacing the termbox.PollEvent with an function value. it's defalut value is termbox.Event. so that in the following tests i have the opportunity to replace this function with new one. this way, I can mock most of the situation. you will see it later.
+The other choice is using the proxy field whose default value is `termbox.PollEvent`. it's defalut value is `termbox.Event`. so that in the following tests i have the opportunity to change this field with others. this way, we can mock most of the situation. as you will see it later.
 
-~~~go
+```go
 //Terminal implementation
 type termboxImpl struct {
     ver   string
@@ -77,12 +77,12 @@ func (tb termboxImpl) WaitEvent() bool {
      }
      return false
 }
-~~~
+```
 
-##implementation - the test 
-here is the mock implementation, in TestTermboxImp i replace the proxy with a new one. it's a fuction type: func() termbox.Event. in this test, the proxy just send the EventResize, EventInterrupt and EventKey in turn. one by one, sleep 15ms for every Event. 
+##unit test - mock the various Events
+here is the first unit test, in `TestTermboxImp` i replace the proxy with a new one. it's a fuction type: `func() termbox.Event`. in this test, the proxy just send the `EventResize`, `EventInterrupt` and `EventKey` in turn. one by one, sleep 15ms for every Event. in this test, only the proxy part is mocked, others are real.
 
-~~~go
+```go
 package view
 
 import (
@@ -103,7 +103,6 @@ func TestTermboxImp(t *testing.T) {
 	term.SetInputMode()
 	term.Clear()
 
-	//term.Interrupt()
 	count := 0
 	x.proxy = func() termbox.Event {
 		time.Sleep(15 * time.Millisecond)
@@ -127,12 +126,22 @@ func TestTermboxImp(t *testing.T) {
 		}
 	}
 	term.Clear()
-	//term.Flush()
 	term.Close()
 }
-~~~
 
-~~~go
+func printMsgf(term Terminal, x, y int, fg, bg uint16, format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	for _, c := range msg {
+		term.SetCell(x, y, c, fg, bg)
+		x += runewidth.RuneWidth(c)
+	}
+}
+```
+
+##unit test - the Interrupt
+in this test, we only test the Interrupt, it's full real case. there is no assert, because if the test failed, it will not end. you will notice that. of course ESC key can stop the test, but I don't need to check that case for such a simple test.
+
+```go
 func TestInterrupt(t *testing.T) {
 	x := new(termboxImpl)
 	var term Terminal = x
@@ -140,7 +149,6 @@ func TestInterrupt(t *testing.T) {
 	term.Init()
 	term.SetInputMode()
 	term.Clear()
-	//term.Flush()
 
 	go wakeMeUp(term)
 
@@ -149,12 +157,22 @@ func TestInterrupt(t *testing.T) {
 	}
 
 	term.Clear()
-	//term.Flush()
 	term.Close()
 }
-~~~
 
-~~~go
+func wakeMeUp(term Terminal) {
+	ticker := time.NewTicker(150 * time.Millisecond)
+	for _ = range ticker.C {
+		term.Interrupt()
+	}
+}
+
+```
+
+##unit test - the panic case
+in this test, we test the panic case, see the `termboxImpl.WaitEvent()` implementation. in this test we need a defer function to check the panic really happens and clean the terminal.
+
+```go
 func TestEventErrCase(t *testing.T) {
 	x := new(termboxImpl)
 	var term Terminal = x
@@ -162,9 +180,7 @@ func TestEventErrCase(t *testing.T) {
 	term.Init()
 	term.SetInputMode()
 	term.Clear()
-	//term.Flush()
 
-	//term.Interrupt()
 	x.proxy = func() termbox.Event {
 		time.Sleep(10 * time.Millisecond)
 		return termbox.Event{Type: termbox.EventError, Err: fmt.Errorf("after 10 ms, fake an error", 10)}
@@ -181,18 +197,4 @@ func TestEventErrCase(t *testing.T) {
 	t.Errorf("EventErr test error")
 }
 
-func wakeMeUp(term Terminal) {
-	ticker := time.NewTicker(150 * time.Millisecond)
-	for _ = range ticker.C {
-		term.Interrupt()
-	}
-}
-
-func printMsgf(term Terminal, x, y int, fg, bg uint16, format string, args ...interface{}) {
-	msg := fmt.Sprintf(format, args...)
-	for _, c := range msg {
-		term.SetCell(x, y, c, fg, bg)
-		x += runewidth.RuneWidth(c)
-	}
-}
-~~~
+```
